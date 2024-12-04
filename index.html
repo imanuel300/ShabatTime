@@ -1,114 +1,53 @@
-<!DOCTYPE html>
-
-<html lang="he">
-
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>זמני כניסת ויציאת שבת</title>
-
-    <script src="libs/hebcal.js"></script> <!-- טעינת הספרייה מקומית -->
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script> <!-- טעינת SunCalc מ-CDN -->
-
-</head>
-
-<body>
-
-    <h1>זמני כניסת ויציאת שבת</h1>
-
-    <div id="shabbat-times"></div>
-
-    <script>
-
-        function getQueryParams() {
-
-            const params = new URLSearchParams(window.location.search);
-
-            return {
-
-                city: params.get('city') || 'Jerusalem',
-
-                daylight: params.get('daylight') === 'true' || true
-
-            };
-
-        }
-
-
-
-        function calculateShabbatTimes(city, daylight) {
-
-            const cityData = Hebcal.cities.getCity(city);
-
-            const lat = cityData[0];
-
-            const lng = cityData[1];
-
-            const today = new Date();
-
-            const times = SunCalc.getTimes(today, lat, lng);
-
-
-
-            const entryTime = new Date(times.sunset.getTime() - (daylight ? 60 : 90) * 60000); // 60 דקות בקיץ, 90 דקות בחורף
-
-            const exitTime = new Date(times.sunset.getTime() + 50 * 60000); // 50 דקות לאחר השקיעה
-
-
-
-            return {
-
-                entry: entryTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
-
-                exit: exitTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
-
-            };
-
-        }
-
-
-
-        function getParsha() {
-
-            const today = new Date();
-
-            const hebcal = new Hebcal.HDate(today);
-
-            const parsha = hebcal.getSedra('h');
-
-            return parsha.join(' ו');
-
-        }
-
-
-
-        const { city, daylight } = getQueryParams();
-
-        const times = calculateShabbatTimes(city, daylight);
-
-        const parsha = getParsha();
-
-
-
-        document.getElementById('shabbat-times').innerHTML = `
-
-            <p>עיר: ${city}</p>
-
-            <p>כניסת שבת: ${times.entry}</p>
-
-            <p>יציאת שבת: ${times.exit}</p>
-
-            <p>פרשת השבוע: ${parsha}</p>
-
-        `;
-
-    </script>
-
-</body>
-
-</html>
-
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>זמני כניסת ויציאת שבת</title>
+<script src="libs/hebcal.js"></script> <!-- טעינת הספרייה מקומית -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script> <!-- טעינת SunCalc מ-CDN -->
+</head>
+<body>
+<h1>זמני כניסת ויציאת שבת</h1>
+<div id="shabbat-times"></div>
+<script>
+function getQueryParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+        city: params.get('city') || 'Jerusalem',
+        daylight: params.get('daylight') === 'true' || true
+    };
+}
+function calculateShabbatTimes(city, daylight) {
+    const cityData = Hebcal.cities.getCity(city);
+    const lat = cityData[0];
+    const lng = cityData[1];
+    const today = new Date();
+    const times = SunCalc.getTimes(today, lat, lng);
+    const entryTime = new Date(times.sunset.getTime() - (daylight ? 60 : 90) * 60000); // 60 דקות בקיץ, 90 דקות בחורף
+    const exitTime = new Date(times.sunset.getTime() + 50 * 60000); // 50 דקות לאחר השקיעה
+    return {
+        entry: entryTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
+        exit: exitTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+    };
+}
+function getParsha() {
+    const today = new Date();
+    const hebcal = new Hebcal.HDate(today);
+    const parsha = hebcal.getSedra('h');
+    return parsha.join(' ו');
+}
+const { city, daylight } = getQueryParams();
+const times = calculateShabbatTimes(city, daylight);
+const parsha = getParsha();
+document.getElementById('shabbat-times').innerHTML = `
+<p>עיר: ${city}</p>
+<p>כניסת שבת: ${times.entry}</p>
+<p>יציאת שבת: ${times.exit}</p>
+<p>פרשת השבוע: ${parsha}</p>
+`;
+</script>
+</body>
+</html>
+
+
