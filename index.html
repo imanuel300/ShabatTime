@@ -4,12 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>זמני כניסת ויציאת שבת</title>
-<script src="libs/hebcal.js"></script> <!-- טעינת הספרייה מקומית -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script> <!-- טעינת SunCalc מ-CDN -->
+<script src="libs/hebcal.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/suncalc/1.8.0/suncalc.min.js"></script>
+<style>
+    body {
+        direction: rtl;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    select {
+        padding: 8px;
+        margin: 10px;
+        font-size: 16px;
+        width: 250px;
+    }
+    .times-container {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+</style>
 </head>
 <body>
 <h1>זמני כניסת ויציאת שבת</h1>
-<div id="shabbat-times"></div>
+<select id="citySelect" onchange="updateTimes()">
+    <option value="Jerusalem">ירושלים (40 דקות)</option>
+    <option value="Tel Aviv">תל אביב (22 דקות)</option>
+    <option value="Haifa">חיפה (30 דקות)</option>
+    <option value="Beer Sheva">באר שבע (22 דקות)</option>
+    <option value="Eilat">אילת (20 דקות)</option>
+    <option value="Netanya">נתניה (22 דקות)</option>
+    <option value="Herzliya">הרצליה (22 דקות)</option>
+    <option value="Petach Tikvah">פתח תקווה (25 דקות)</option>
+    <option value="Rishon LeZion">ראשון לציון (22 דקות)</option>
+    <option value="Rehovot">רחובות (22 דקות)</option>
+    <option value="Ashdod">אשדוד (22 דקות)</option>
+    <option value="Ashkelon">אשקלון (22 דקות)</option>
+    <option value="Tiberias">טבריה (25 דקות)</option>
+    <option value="Beit Shemesh">בית שמש (30 דקות)</option>
+    <option value="Modiin">מודיעין (25 דקות)</option>
+</select>
+<div id="shabbat-times" class="times-container"></div>
 <script>
 function getQueryParams() {
     const params = new URLSearchParams(window.location.search);
@@ -18,34 +57,101 @@ function getQueryParams() {
         daylight: params.get('daylight') === 'true' || true
     };
 }
+
+function getCityAddedMinutes(city) {
+    const cityMinutes = {
+        'Jerusalem': 40,
+        'Haifa': 30,
+        'Tel Aviv': 22,
+        'Beer Sheva': 22,
+        'Eilat': 20,
+        'Netanya': 22,
+        'Herzliya': 22,
+        'Petach Tikvah': 25,
+        'Rishon LeZion': 22,
+        'Rehovot': 22,
+        'Ashdod': 22,
+        'Ashkelon': 22,
+        'Tiberias': 25,
+        'Beit Shemesh': 30,
+        'Modiin': 25
+    };
+    return cityMinutes[city] || 22;
+}
+
+// פונקציה למציאת יום שישי הקרוב
+function getNextFriday() {
+    const today = new Date();
+    const friday = new Date(today);
+    const daysTillFriday = (5 + 7 - today.getDay()) % 7;
+    friday.setDate(today.getDate() + daysTillFriday);
+    return friday;
+}
+
+// פונקציה לחישוב זמן צאת הכוכבים לפי 8.5 מעלות
+function calculateTzetHaKochavim(sunset, lat, lng) {
+    const DEGREES = 8.5;
+    const MINUTES_PER_DEGREE = 4.3;
+    const minutesAfterSunset = DEGREES * MINUTES_PER_DEGREE;
+    return new Date(sunset.getTime() + (minutesAfterSunset * 60000));
+}
+
 function calculateShabbatTimes(city, daylight) {
     const cityData = Hebcal.cities.getCity(city);
     const lat = cityData[0];
     const lng = cityData[1];
-    const today = new Date();
-    const times = SunCalc.getTimes(today, lat, lng);
-    const entryTime = new Date(times.sunset.getTime() - (daylight ? 60 : 90) * 60000); // 60 דקות בקיץ, 90 דקות בחורף
-    const exitTime = new Date(times.sunset.getTime() + 50 * 60000); // 50 דקות לאחר השקיעה
+    const friday = getNextFriday(); // מקבל את יום שישי הקרוב
+    const times = SunCalc.getTimes(friday, lat, lng);
+    
+    // חישוב זמן כניסת שבת לפי המנהג בכל עיר
+    const addedMinutes = getCityAddedMinutes(city);
+    const entryTime = new Date(times.sunset.getTime() - (addedMinutes * 60000));
+    
+    // חישוב זמן יציאת שבת לפי 8.5 מעלות מתחת לאופק
+    const exitTime = calculateTzetHaKochavim(times.sunset, lat, lng);
+
+    // הוספת יום ליציאת שבת
+    exitTime.setDate(exitTime.getDate() + 1);
+
     return {
         entry: entryTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
-        exit: exitTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+        exit: exitTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
+        sunset: times.sunset.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }),
+        addedMinutes: addedMinutes,
+        hebrewDate: new Hebcal.HDate(friday).toString('h')
     };
 }
+
 function getParsha() {
-    const today = new Date();
-    const hebcal = new Hebcal.HDate(today);
+    const friday = getNextFriday();
+    const hebcal = new Hebcal.HDate(friday);
     const parsha = hebcal.getSedra('h');
     return parsha.join(' ו');
 }
-const { city, daylight } = getQueryParams();
-const times = calculateShabbatTimes(city, daylight);
-const parsha = getParsha();
-document.getElementById('shabbat-times').innerHTML = `
-<p>עיר: ${city}</p>
-<p>כניסת שבת: ${times.entry}</p>
-<p>יציאת שבת: ${times.exit}</p>
-<p>פרשת השבוע: ${parsha}</p>
-`;
+
+function updateTimes() {
+    const selectedCity = document.getElementById('citySelect').value;
+    const { daylight } = getQueryParams();
+    const times = calculateShabbatTimes(selectedCity, daylight);
+    const parsha = getParsha();
+
+    document.getElementById('shabbat-times').innerHTML = `
+        <p><strong>עיר:</strong> ${selectedCity}</p>
+        <p><strong>תאריך:</strong> ${times.hebrewDate}</p>
+        <p><strong>תוספת שבת:</strong> ${times.addedMinutes} דקות לפני השקיעה</p>
+        <p><strong>שקיעה:</strong> ${times.sunset}</p>
+        <p><strong>כניסת שבת:</strong> ${times.entry}</p>
+        <p><strong>יציאת שבת:</strong> ${times.exit} (8.5 מעלות מתחת לאופק)</p>
+        <p><strong>פרשת השבוע:</strong> ${parsha}</p>
+    `;
+}
+
+// Initialize on page load
+window.onload = function() {
+    const { city } = getQueryParams();
+    document.getElementById('citySelect').value = city;
+    updateTimes();
+};
 </script>
 </body>
 </html>
